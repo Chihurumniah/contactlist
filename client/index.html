@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>To-Do List</title>
+<style>
+body { font-family: sans-serif; }
+.container { width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+h1 { text-align: center; }
+#contactInput { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; }
+ul { list-style: none; padding: 0; margin-top: 10px; }
+li { padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; }
+li span { flex-grow: 1; word-break: break-all; }
+li button { background-color: #f44336; color: white; border: none; padding: 5px 10px; margin-left: 10px; border-radius: 3px; cursor: pointer; }
+li button.update { background-color: #007bff; margin-left: 5px;} /* Blue for update button */
+
+/* Style for the edit input field (initially hidden) */
+li input[type="text"] {
+  display: none; /* Initially hidden */
+  flex-grow: 1; /* Take up available space */
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  box-sizing: border-box;
+  margin-right: 5px;
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Contact List</h1>
+  <input type="text" id="contactInput" placeholder="Enter new contact">
+  <button onclick="addContact()">Add Contact</button>
+  <ul id="contactList">
+      
+  </ul>
+</div>
+
+<script>
+
+let allContacts = ["one 123", "two 123", "three 123"]
+
+async function loadContacts(){
+  try {
+    const responds = await fetch('http://127.0.0.1:3000/')
+   const data = await responds.json()
+   contactList.innerHTML = ""
+   const newContacts = JSON.parse(data.contact)
+    const contactInput = document.getElementById('contactInput');
+  if (newContacts.length > 0){
+      for(let i = 0; i < newContacts.length; i++){
+          const newContact = document.createElement('li');
+          let contactText = newContacts[i]
+          newContact.innerHTML = `
+          <span>
+            <span>${contactText.split(" ")[0]}</span><br />
+            <span style="font-size:12px; ">${contactText.split(" ").length > 1 ? contactText.split(" ")[1] : "" }</span>
+          </span>
+          <input type="text" style=" display:none;" value="${contactText}"> 
+          <button class="update" onclick="toggleEdit(this, ${i})">Update</button>
+          <button onclick="deleteContact(this, ${i})">Delete</button>
+        `;
+        contactList.appendChild(newContact);
+      }
+  }
+  } catch (error) {
+    alert("error")
+    console.log(error)
+  }
+  
+}
+
+
+setTimeout(()=>{loadContacts()}, 3000)
+async function addContact() {
+  try {
+    const contactInput = document.getElementById('contactInput');
+    const contactText = contactInput.value.trim();
+
+    if (contactText !== "") {
+      //make api call here to save data
+      const contactList = document.getElementById('contactList');
+      const newContact = document.createElement('li');
+      // const responds = await fetch('http://127.0.0.1:3000/')
+      
+        
+        //  //http://127.0.0.1:5500/project/client/index.html
+        //    if(!res.ok){
+        //      alert("error")
+        //        //throw new Error('server error')
+        //    }  
+     //let parsedName = contactText.split(" ").length > 1 ? 
+      newContact.innerHTML = `
+        <span>
+           <span>${contactText.split(" ")[0]}</span><br />
+           <span style="font-size:12px; ">${contactText.split(" ").length > 1 ? contactText.split(" ")[1] : "" }</span>
+        </span>
+        <input type="text" style=" display:none;" value="${contactText}"> 
+        <button class="update" onclick="toggleEdit(this)">Update</button>
+        <button onclick="deleteContact(this)">Delete</button>
+      `;
+      //send the data to the backend
+      const res = await fetch('http://127.0.0.1:3000/addcontact', {
+            method:'POST',
+            headers:{
+              'Content-Type':'application/json',
+            },
+            body:JSON.stringify({contact:contactText})
+        })
+
+      contactList.appendChild(newContact);
+      contactInput.value = "";
+    }
+  } catch (error) {
+      console.log(error)
+    }
+}
+
+async function deleteContact(button, id) {
+  try {
+    const contactList = document.getElementById('contactList');
+    const contactItem = button.parentNode;
+      //send the data to the backend
+      const res = await fetch(`http://127.0.0.1:3000/deletecontact/${id}`, {
+            method:'DELETE',
+            headers:{
+              'Content-Type':'application/json',
+            },
+            body:JSON.stringify({contactid:id})
+        })
+    contactList.removeChild(contactItem);
+  } catch (error) {
+    console.log(error)
+  }
+  
+}
+
+async function toggleEdit(button, id) {
+  try {
+    const contactItem = button.parentNode;
+    const span = contactItem.querySelector('span');
+    const input = contactItem.querySelector('input[type="text"]');
+
+    if (button.textContent === "Update") { // Entering edit mode
+        span.style.display = 'none';
+        input.style.display = 'inline';
+        input.focus(); // Put focus on the input field
+        button.textContent = "Save"; // Change button text to "Save"
+    } else { // Saving changes
+        const newContactText = input.value.trim();
+        if (newContactText !== "") { // Update only if the text is not empty
+          //load all contacts
+          loadContacts()
+          // span.textContent = ` <span>
+          //   <span>${newContactText.split(" ")[0]}</span><br />
+          //   <span style="font-size:12px; ">${newContactText.split(" ").length > 1 ? newContactText.split(" ")[1] : "" }</span>
+          // </span>`
+          //newContactText;
+        }
+         //send the data to the backend
+      const res = await fetch(`http://127.0.0.1:3000/updatecontact/${id}`, {
+            method:'PUT',
+            headers:{
+              'Content-Type':'application/json',
+            },
+            body:JSON.stringify({contact:newContactText})
+        })
+        span.style.display = 'inline';
+        input.style.display = 'none';
+        button.textContent = "Update";
+    }   
+  } catch (error) {
+    console.log(error)
+  }
+
+}
+
+
+document.getElementById('contactInput').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        addContact();
+    }
+});
+
+</script>
+
+</body>
+</html>
